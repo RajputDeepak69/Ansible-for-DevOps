@@ -1,0 +1,25 @@
+- name: Include vault file in vars
+  ansible.builtin.include_vars:
+    file: vault.yml   
+
+- name: Get S3 buckets info
+  amazon.aws.s3_bucket_info:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ aws_region }}"
+  register: result
+
+- name: Print bucket names
+  ansible.builtin.debug:
+    msg: "{{ result.buckets | map(attribute='name') | list }}"
+
+- name: print ec2 instances names
+  amazon.aws.ec2_instance_info:
+    aws_access_key: "{{ aws_access_key }}"
+    aws_secret_key: "{{ aws_secret_key }}"
+    region: "{{ aws_region }}"
+  register: result
+
+- name: print instances names
+  ansible.builtin.debug:
+    msg: "{{ result.instances | map(attribute='tags.Name') | list }}"
