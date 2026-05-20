@@ -1,0 +1,40 @@
+--- 
+- name: creating resources on aws using ansible
+  hosts: all
+  vars_files:
+    -vault.yml
+
+  module_defaults:
+    group/aws:
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      region: "{{ aws_region }}"
+
+  tasks:
+    - name: create some ec2 instances with different ami ids 
+      amazon.aws.ec2_instance:
+        name: "{{ item.name }}"
+        instance_type: t2.micro
+        image_id: "{{ item.ami_id }}"
+        key_name: abc....
+        security_group: abc....
+        vpc_subnet_id: abc....
+        state: present
+        wait: yes
+      loop:
+        - name: web
+          ami_id: ami-0fdfb4d987b63ae72
+        - name: dev
+          ami_id: ami-091138d0f0d41ff90
+        - name: db
+          ami_id: ami-0236922087fa98b6OBe
+
+    - name: EC2 instance names
+      amazon.aws.ec2_instance_info:region: 
+        "{{ region }}"
+      register: result
+
+    - name: Show all instance names
+      ansible.builtin.debug:
+        msg: "{{ result.instances | map(attribute='tags.Name') | list }}"
+            
