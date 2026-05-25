@@ -1,0 +1,31 @@
+---
+- name: Delete stopped EC2 instances
+  hosts: localhost
+
+  vars_files:
+    - vault.yml
+
+  tasks:
+    - name: Collect stopped instances
+      amazon.aws.ec2_instance_info:
+        region: "{{ aws_region }}"
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        filters:
+          instance-state-name: stopped
+      register: result
+
+    - name: Show gathered instances
+      debug:
+        var: result.instances
+
+    - name: Delete gathered instances
+      amazon.aws.ec2_instance:
+        region: "{{ aws_region }}"
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        state: absent
+        instance_ids: "{{ item.instance_id }}"
+        wait: yes
+      loop: "{{ result.instances }}"
+      when: result.instances | length > 0
