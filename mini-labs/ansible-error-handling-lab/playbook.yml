@@ -1,0 +1,29 @@
+---
+- name: error handeling in ansible
+  hosts: all
+  become: true
+  tasks:
+
+    - name: checking openssh and openssl
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: latest
+      loop:
+        - openssh
+        - openssl
+      ignore_errors: true
+
+    - name: check docker version ...
+      ansible.builtin.command: docker --version
+      register: output
+      ignore_errors: true
+      
+    - name: print output
+      ansible.builtin.debug:
+        var: output
+
+    - name: intalling docker
+      ansible.builtin.apt:
+         name: docker.io
+         state: present
+      when: output.failed
