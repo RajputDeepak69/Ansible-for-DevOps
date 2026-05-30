@@ -1,29 +1,33 @@
 ---
-- name: error handeling in ansible
+- name: Error handling in Ansible
   hosts: all
   become: true
+
   tasks:
 
-    - name: checking openssh and openssl
+    - name: Install openssh and openssl
       ansible.builtin.apt:
         name: "{{ item }}"
         state: latest
+        update_cache: yes
       loop:
-        - openssh
+        - openssh-client
         - openssl
       ignore_errors: true
 
-    - name: check docker version ...
+    - name: Check docker 
       ansible.builtin.command: docker --version
       register: output
-      ignore_errors: true
-      
-    - name: print output
-      ansible.builtin.debug:
-        var: output
+      changed_when: false
+      failed_when: false
 
-    - name: intalling docker
+    - name: Print output
+      ansible.builtin.debug:
+        var: output.stdout
+
+    - name: Install docker 
       ansible.builtin.apt:
-         name: docker.io
-         state: present
-      when: output.failed
+        name: docker.io
+        state: present
+        update_cache: yes
+      when: output.rc != 0
