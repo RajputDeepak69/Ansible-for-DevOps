@@ -1,0 +1,11 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: gather s3 buckets info 
+      amazon.aws.s3_bucket_info:
+      register: bucket-info
+
+    - name: print bucket names
+      ansible.builtin.debug:
+        vars: bucket-info
