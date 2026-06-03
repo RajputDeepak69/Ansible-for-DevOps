@@ -1,11 +1,26 @@
 ---
 - hosts: localhost
   gather_facts: false
-  tasks:
-    - name: gather s3 buckets info 
-      amazon.aws.s3_bucket_info:
-      register: bucket-info
+  vars_files:
+    - vault.yml
 
-    - name: print bucket names
+  module_defaults:
+    group/aws:
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      aws_region: "{{ aws_region }}"
+
+  tasks:
+    - name: gather s3 buckets info
+      amazon.aws.s3_bucket_info:
+      register: bucket
+
+    - name: print s3 buckets info
       ansible.builtin.debug:
-        vars: bucket-info
+        msg: "{{ bucket.buckets | map(attribute='name') | list }}"
+
+    - name: enforse bucket versioning
+      amazon.aws.s3_bucket:
+        name: "{{ item.name }}"
+        versioning: true
+      loop: "{{ bucket.buckets }}"
