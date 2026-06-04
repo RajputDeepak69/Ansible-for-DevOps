@@ -1,0 +1,75 @@
+---
+- name: Enforce S3 Bucket Versioning
+  hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - vault.yml
+
+  module_defaults:
+    group/aws:
+      aws_access_key: "{{ aws_access_key }}"
+      aws_secret_key: "{{ aws_secret_key }}"
+      aws_region: "{{ aws_region }}"
+
+  tasks:
+    - name: Gather S3 buckets info
+      amazon.aws.s3_bucket_info:
+      register: bucket
+
+    - name: Print S3 bucket names
+      ansible.builtin.debug:
+        msg: "{{ bucket.buckets | map(attribute='name') | list }}"
+
+    - name: Enforce bucket versioning
+      amazon.aws.s3_bucket:
+        name: "{{ item.name }}"
+        versioning: true
+      loop: "{{ bucket.buckets }}"
+
+- name: Enforce Security Baseline on Mixed EC2 Fleet
+  hosts: webservers
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Setting OS-specific variables
+      ansible.builtin.set_fact:
+        firewall_service: "{{ 'firewalld' if ansible_os_family == 'RedHat' else 'ufw' }}"
+        ssh_service_name: "{{ 'sshd' if ansible_os_family == 'RedHat' else 'ssh' }}"
+
+    - name: Ensure firewalld on RedHat
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: true
+      when: ansible_os_family == "RedHat"
+
+    - name: Ensure ufw for Debian family
+      ansible.builtin.service:
+        name: ufw
+        state: started
+        enabled: true
+      when: ansible_os_family == "Debian"
+
+    - name: Disable root SSH login
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+        validate: 'sshd -t -f %s'
+      notify: Restart SSH
+
+    - name: Disable password authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+        validate: 'sshd -t -f %s'
+      notify: Restart SSH
+
+  handlers:
+    - name: Restart SSH
+      ansible.builtin.service:
+        name: "{{ ssh_service_name }}"
+        state: restarted
